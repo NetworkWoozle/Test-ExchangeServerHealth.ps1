@@ -1,0 +1,32 @@
+V1.00.00, 05/07/2012    -   Initial version
+V1.01.00, 05/08/2012    -   Minor bug fixes and removed Edge Tranport checks
+V1.02.00, 05/05/2013    -   A lot of bug fixes, updated SMTP to use Send-MailMessage, added DAG health check.
+V1.03.00, 04/08/2013    -   Minor bug fixes
+V1.04.00, 19/08/2013    -   Added Exchange 2013 compatibility, added option to output a log file, converted many
+                            sections of code to use pre-defined strings, fixed -AlertsOnly parameter, improved summary 
+                            sections of report to be more readable and include DAG summary
+V1.05.00, 23/08/2013    -   Added workaround for Test-ServiceHealth error for Exchange 2013 CAS-only servers
+V1.06.00, 28/10/2013    -   Added workaround for Test-Mailflow error for Exchange 2013 Mailbox servers.
+                        -   Added workaround for Exchange 2013 mail test.
+				        -   Added localization strings for service health check errors for non-English systems.
+				        -   Fixed an uptime calculation bug for some regional settings.
+				        -   Excluded recovery databases from active database calculation.
+				        -   Fixed bug where high transport queues would not count as an alert.
+                        -   Fixed error thrown when Site attribute can't be found for Exchange 2003 servers.
+                        -   Fixed bug causing Exchange 2003 servers to be added to the report twice.
+V1.07.00, 24/11/2013    -   Fixed bug where disabled content indexes were counted as failed.
+V1.08.00, 29/06/2014    -   Fixed bug with DAG reporting in mixed Exchange 2010/2013 orgs.
+V1.09.00, 06/07/2014    -   Fixed bug with DAG member replication health reporting for mixed Exchange 2010/2013 orgs.
+V1.10.00, 19/08/2014    -   Fixed bug with E14 replication health not testing correct server.
+V1.11.00, 11/02/2015    -   Added queue length to Transport queue result in report.
+V1.12.00, 05/03/2015    -   Fixed bug with color-coding in report for Transport Queue length.
+V1.13.00, 07/03/2015    -   Fixed bug with incorrect function name used sometimes when trying to call Write-LogFile
+V1.14.00, 21/05/2015    -   Fixed bug with color-coding in report for Transport Queue length on CAS-only Exchange 2013 servers.
+V1.15.00, 18/11/2015    -   Fixed bug with Exchange 2016 version detection.
+V1.16.00, 13/04/2017    -   Fixed bugs with recovery DB detection, invalid variables, shadow redundancy queues, and lagged copy detection.
+V1.17.00, 17/05/2017    -   Fixed bug with auto-suspended content index detection
+V1.17.1A, 07/02/2019    -   Seperated functions out to their own files
+                        -   Seperated out string list to seperate file
+                        -   Config now resides in config.xml, users should no longer need to modify the script for their environment
+                        -   License was removed from code.  Added reference to License File for all seperated functions. Copyright was moved from License to code to better show ownership
+                        -   Added this Changelog file.  All changes to the code should be noted here.

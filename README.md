@@ -80,16 +80,21 @@ Checks all servers in the organization, outputs the results to the shell window,
 http://exchangeserverpro.com/powershell-script-exchange-server-health-check-report
 
 ## Credits
+
 Written by: Paul Cunningham
 
 Find me on:
 
-* My Blog:	https://paulcunningham.me
+* My Blog:	http://paulcunningham.me
 * Twitter:	https://twitter.com/paulcunningham
-* LinkedIn:	https://au.linkedin.com/in/cunninghamp/
+* LinkedIn:	http://au.linkedin.com/in/cunninghamp/
 * Github:	https://github.com/cunninghamp
 
-Check out my [books](https://paulcunningham.me/books/) and [courses](https://paulcunningham.me/training/) to learn more about Office 365 and Exchange Server.
+For more Exchange Server tips, tricks and news
+check out Exchange Server Pro.
+
+* Website:	http://exchangeserverpro.com
+* Twitter:	http://twitter.com/exchservpro
 
 Additional Credits (code contributions and testing):
 - [Chris Brown](http://twitter.com/chrisbrownie)

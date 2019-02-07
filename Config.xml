@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Settings>
+    <SMTP>
+        <TO></TO>
+        <FROM></FROM>
+        <SUBJECT></SUBJECT>
+        <SERVER></SERVER>
+    </SMTP>
+    <REPORT>
+        <EMAIL>
+            <SUBJECT>
+            </SUBJECT>
+        </EMAIL>
+    </REPORT>
+    <LOG>
+        <FILE>
+        </FILE>
+        <ROTATION>
+            <PERIOD>
+                <TASKRUNS></TASKRUNS>
+                <TIME></TIME>
+            </PERIOD>
+        </ROTATION>
+    </LOG>
+</Settings>

@@ -50,13 +50,6 @@ https://practical365.com/exchange-server/powershell-script-exchange-server-healt
 .NOTES
 Written by: Paul Cunningham
 
-Find me on:
-
-* My Blog:	https://paulcunningham.me
-* Twitter:	https://twitter.com/paulcunningham
-* LinkedIn:	https://au.linkedin.com/in/cunninghamp/
-* Github:	https://github.com/cunninghamp
-
 Additional Credits (code contributions and testing):
 - Chris Brown, http://twitter.com/chrisbrownie
 - Ingmar Brückner
@@ -68,59 +61,6 @@ Additional Credits (code contributions and testing):
 - Ryan
 - Rob Silver
 - andrewcr7, https://github.com/andrewcr7
-
-License:
-
-The MIT License (MIT)
-
-Copyright (c) 2017 Paul Cunningham
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-Change Log
-V1.00, 05/07/2012 - Initial version
-V1.01, 05/08/2012 - Minor bug fixes and removed Edge Tranport checks
-V1.02, 05/05/2013 - A lot of bug fixes, updated SMTP to use Send-MailMessage, added DAG health check.
-V1.03, 04/08/2013 - Minor bug fixes
-V1.04, 19/08/2013 - Added Exchange 2013 compatibility, added option to output a log file, converted many
-                    sections of code to use pre-defined strings, fixed -AlertsOnly parameter, improved summary 
-                    sections of report to be more readable and include DAG summary
-V1.05, 23/08/2013 - Added workaround for Test-ServiceHealth error for Exchange 2013 CAS-only servers
-V1.06, 28/10/2013 - Added workaround for Test-Mailflow error for Exchange 2013 Mailbox servers.
-                  - Added workaround for Exchange 2013 mail test.
-				  - Added localization strings for service health check errors for non-English systems.
-				  - Fixed an uptime calculation bug for some regional settings.
-				  - Excluded recovery databases from active database calculation.
-				  - Fixed bug where high transport queues would not count as an alert.
-                  - Fixed error thrown when Site attribute can't be found for Exchange 2003 servers.
-                  - Fixed bug causing Exchange 2003 servers to be added to the report twice.
-V1.07, 24/11/2013 - Fixed bug where disabled content indexes were counted as failed.
-V1.08, 29/06/2014 - Fixed bug with DAG reporting in mixed Exchange 2010/2013 orgs.
-V1.09, 06/07/2014 - Fixed bug with DAG member replication health reporting for mixed Exchange 2010/2013 orgs.
-V1.10, 19/08/2014 - Fixed bug with E14 replication health not testing correct server.
-V1.11, 11/02/2015 - Added queue length to Transport queue result in report.
-V1.12, 05/03/2015 - Fixed bug with color-coding in report for Transport Queue length.
-V1.13, 07/03/2015 - Fixed bug with incorrect function name used sometimes when trying to call Write-LogFile
-V1.14, 21/05/2015 - Fixed bug with color-coding in report for Transport Queue length on CAS-only Exchange 2013 servers.
-V1.15, 18/11/2015 - Fixed bug with Exchange 2016 version detection.
-V1.16, 13/04/2017 - Fixed bugs with recovery DB detection, invalid variables, shadow redundancy queues, and lagged copy detection.
-V1.17, 17/05/2017 - Fixed bug with auto-suspended content index detection
 #>
 
 #requires -version 2
@@ -151,6 +91,33 @@ param (
 
 
 #...................................
+#Imports
+#   TODO:   
+#       -   Functions need to have tests written for them
+#       -   Need to add in logging for the imports
+#       -   Move imports to be called just before first use
+#...................................
+
+Write-Verbose "Importing new-dagmemberhtmltablecell function"
+Import-Module -Force $PSScriptRoot\new-dagmemberhtmltablecell.ps1
+
+Write-Verbose "Importing New-ServerHealthHTMLTableCell function"
+Import-Module -Force $PSScriptRoot\New-ServerHealthHTMLTableCell.ps1
+
+Write-Verbose "Importing Test-E15CASServiceHealth function"
+Import-Module -Force "$PSScriptRoot\Test-E15CASServiceHealth.ps1"
+
+Write-Verbose "Importing Test-E15MailFlow function"
+Import-Module -Force "$PSScriptRoot\Test-E15MailFlow.ps1"
+
+Write-Verbose "Importing Test-E14ReplicationHealth function"
+Import-Module -Force "$PSScriptRoot\Test-E14ReplicationHealth.ps1"
+
+Write-Verbose "Importing String List"
+Import-Module -Force "$PSScriptRoot\StringList.ps1"
+
+
+#...................................
 # Variables
 #...................................
 
@@ -177,6 +144,7 @@ $myDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 #...................................
 # Modify these Variables (optional)
+# TODO: move to external config file
 #...................................
 
 $reportemailsubject = "Exchange Server Health Report"
@@ -185,6 +153,7 @@ $logfile = "$myDir\exchangeserverhealth.log"
 
 #...................................
 # Modify these Email Settings
+# TODO: move to external config file
 #...................................
 
 $smtpsettings = @{
@@ -198,6 +167,7 @@ $smtpsettings = @{
 #...................................
 # Modify these language 
 # localization strings.
+# These need to be moved into a languages file and locale needs to be checked on the servers
 #...................................
 
 # The server roles must match the role names you see when you run Test-ServiceHealth.
@@ -209,296 +179,18 @@ $umrole = "Unified Messaging Server Role"
 # This should match the word for "Success", or the result of a successful Test-MAPIConnectivity test
 $success = "Success"
 
-#...................................
-# Logfile Strings
-#...................................
-
-$logstring0 = "====================================="
-$logstring1 = " Exchange Server Health Check"
-
-#...................................
-# Initialization Strings
-#...................................
-
-$initstring0 = "Initializing..."
-$initstring1 = "Loading the Exchange Server PowerShell snapin"
-$initstring2 = "The Exchange Server PowerShell snapin did not load."
-$initstring3 = "Setting scope to entire forest"
-
-#...................................
-# Error/Warning Strings
-#...................................
-
-$string0 = "Server is not an Exchange server. "
-$string1 = "Server is not reachable. "
-$string3 = "------ Checking"
-$string4 = "Could not test service health. "
-$string5 = "required services not running. "
-$string6 = "Could not check queue. "
-$string7 = "Public Folder database not mounted. "
-$string8 = "Skipping Edge Transport server. "
-$string9 = "Mailbox databases not mounted. "
-$string10 = "MAPI tests failed. "
-$string11 = "Mail flow test failed. "
-$string12 = "No Exchange Server 2003 checks performed. "
-$string13 = "Server not found in DNS. "
-$string14 = "Sending email. "
-$string15 = "Done."
-$string16 = "------ Finishing"
-$string17 = "Unable to retrieve uptime. "
-$string18 = "Ping failed. "
-$string19 = "No alerts found, and AlertsOnly switch was used. No email sent. "
-$string20 = "You have specified a single server to check"
-$string21 = "Couldn't find the server $server. Script will terminate."
-$string22 = "The file $ignorelistfile could not be found. No servers, DAGs or databases will be ignored."
-$string23 = "You have specified a filename containing a list of servers to check"
-$string24 = "The file $serverlist could not be found. Script will terminate."
-$string25 = "Retrieving server list"
-$string26 = "Removing servers in ignorelist from server list"
-$string27 = "Beginning the server health checks"
-$string28 = "Servers, DAGs and databases to ignore:"
-$string29 = "Servers to check:"
-$string30 = "Checking DNS"
-$string31 = "DNS check passed"
-$string32 = "Checking ping"
-$string33 = "Ping test passed"
-$string34 = "Checking uptime"
-$string35 = "Checking service health"
-$string36 = "Checking Hub Transport Server"
-$string37 = "Checking Mailbox Server"
-$string38 = "Ignore list contains no server names."
-$string39 = "Checking public folder database"
-$string40 = "Public folder database status is"
-$string41 = "Checking mailbox databases"
-$string42 = "Mailbox database status is"
-$string43 = "Offline databases: "
-$string44 = "Checking MAPI connectivity"
-$string45 = "MAPI connectivity status is"
-$string46 = "MAPI failed to: "
-$string47 = "Checking mail flow"
-$string48 = "Mail flow status is"
-$string49 = "No active DBs"
-$string50 = "Finished checking server"
-$string51 = "Skipped"
-$string52 = "Using alternative test for Exchange 2013 CAS-only server"
-$string60 = "Beginning the DAG health checks"
-$string61 = "Could not determine server with active database copy"
-$string62 = "mounted on server that is activation preference"
-$string63 = "unhealthy database copy count is"
-$string64 = "healthy copy/replay queue count is"
-$string65 = "(of"
-$string66 = ")"
-$string67 = "unhealthy content index count is"
-$string68 = "DAGs to check:"
-$string69 = "DAG databases to check"
-
-
 
 #...................................
 # Functions
+# TODO: Still need to finish seperating functions out to their own files.  Need to move all logfile related task to a new class.
 #...................................
-
-#This function is used to generate HTML for the DAG member health report
-Function New-DAGMemberHTMLTableCell()
-{
-    param( $lineitem )
-    
-    $htmltablecell = $null
-
-    switch ($($line."$lineitem"))
-    {
-        $null { $htmltablecell = "<td>n/a</td>" }
-        "Passed" { $htmltablecell = "<td class=""pass"">$($line."$lineitem")</td>" }
-        default { $htmltablecell = "<td class=""warn"">$($line."$lineitem")</td>" }
-    }
-    
-    return $htmltablecell
-}
-
-#This function is used to generate HTML for the server health report
-Function New-ServerHealthHTMLTableCell()
-{
-    param( $lineitem )
-    
-    $htmltablecell = $null
-    
-    switch ($($reportline."$lineitem"))
-    {
-        $success {$htmltablecell = "<td class=""pass"">$($reportline."$lineitem")</td>"}
-        "Success" {$htmltablecell = "<td class=""pass"">$($reportline."$lineitem")</td>"}
-        "Pass" {$htmltablecell = "<td class=""pass"">$($reportline."$lineitem")</td>"}
-        "Warn" {$htmltablecell = "<td class=""warn"">$($reportline."$lineitem")</td>"}
-        "Access Denied" {$htmltablecell = "<td class=""warn"">$($reportline."$lineitem")</td>"}
-        "Fail" {$htmltablecell = "<td class=""fail"">$($reportline."$lineitem")</td>"}
-        "Could not test service health. " {$htmltablecell = "<td class=""warn"">$($reportline."$lineitem")</td>"}
-        "Unknown" {$htmltablecell = "<td class=""warn"">$($reportline."$lineitem")</td>"}
-        default {$htmltablecell = "<td>$($reportline."$lineitem")</td>"}
-    }
-    
-    return $htmltablecell
-}
 
 #This function is used to write the log file if -Log is used
 Function Write-Logfile()
 {
-    param( $logentry )
+    param( $logentry, $logfile )
     $timestamp = Get-Date -DisplayHint Time
     "$timestamp $logentry" | Out-File $logfile -Append
-}
-
-#This function is used to test service health for Exchange 2013 CAS-only servers
-Function Test-E15CASServiceHealth()
-{
-    param ( $e15cas )
-    
-    $e15casservicehealth = $null
-    $servicesrunning = @()
-    $servicesnotrunning = @()
-    $casservices = @(
-                    "IISAdmin",
-                    "W3Svc",
-                    "WinRM",
-                    "MSExchangeADTopology",
-                    "MSExchangeDiagnostics",
-                    "MSExchangeFrontEndTransport",
-                    #"MSExchangeHM",
-                    "MSExchangeIMAP4",
-                    "MSExchangePOP3",
-                    "MSExchangeServiceHost",
-                    "MSExchangeUMCR"
-                    )
-        
-    try {
-        $servicestates = @(Get-WmiObject -ComputerName $e15cas -Class Win32_Service -ErrorAction STOP | Where-Object {$casservices -icontains $_.Name} | Select-Object name,state,startmode)
-    }
-    catch
-    {
-        if ($Log) {Write-LogFile $_.Exception.Message}
-        Write-Warning $_.Exception.Message
-        $e15casservicehealth = "Fail"
-    }    
-    
-    if (!($e15casservicehealth))
-    {
-        $servicesrunning = @($servicestates | Where-Object {$_.StartMode -eq "Auto" -and $_.State -eq "Running"})
-        $servicesnotrunning = @($servicestates | Where-Object {$_.Startmode -eq "Auto" -and $_.State -ne "Running"})
-        if ($($servicesnotrunning.Count) -gt 0)
-        {
-            Write-Verbose "Service health check failed"
-            Write-Verbose "Services not running:"
-            foreach ($service in $servicesnotrunning)
-            {
-                Write-Verbose "- $($service.Name)"    
-            }
-            $e15casservicehealth = "Fail"    
-        }
-        else
-        {
-            Write-Verbose "Service health check passed"
-            $e15casservicehealth = "Pass"
-        }
-    }
-    return $e15casservicehealth
-}
-
-#This function is used to test mail flow for Exchange 2013 Mailbox servers
-Function Test-E15MailFlow()
-{
-    param ( $e15mailboxserver )
-
-    $e15mailflowresult = $null
-    
-    Write-Verbose "Creating PSSession for $e15mailboxserver"
-    $url = (Get-PowerShellVirtualDirectory -Server $e15mailboxserver -AdPropertiesOnly | Where-Object {$_.Name -eq "Powershell (Default Web Site)"}).InternalURL.AbsoluteUri
-    if ($url -eq $null)
-    {
-        $url = "http://$e15mailboxserver/powershell"
-    }
-
-    try
-    {
-        $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $url -ErrorAction STOP
-    }
-    catch
-    {
-        Write-Verbose "Something went wrong"
-        if ($Log) {Write-LogFile $_.Exception.Message}
-        Write-Warning $_.Exception.Message
-        $e15mailflowresult = "Fail"
-    }
-
-    try
-    {
-        Write-Verbose "Running mail flow test on $e15mailboxserver"
-        $result = Invoke-Command -Session $session {Test-Mailflow} -ErrorAction STOP
-        $e15mailflowresult = $result.TestMailflowResult
-    }
-    catch
-    {
-        Write-Verbose "An error occurred"
-        if ($Log) {Write-LogFile $_.Exception.Message}
-        Write-Warning $_.Exception.Message
-        $e15mailflowresult = "Fail"
-    }
-
-    Write-Verbose "Mail flow test: $e15mailflowresult"
-    Write-Verbose "Removing PSSession"
-    Remove-PSSession $session.Id
-
-    return $e15mailflowresult
-}
-
-#This function is used to test replication health for Exchange 2010 DAG members in mixed 2010/2013 organizations
-Function Test-E14ReplicationHealth()
-{
-    param ( $e14mailboxserver )
-
-    $e14replicationhealth = $null
-    
-    #Find an E14 CAS in the same site
-    $ADSite = (Get-ExchangeServer $e14mailboxserver).Site
-    $e14cas = (Get-ExchangeServer | Where-Object {$_.IsClientAccessServer -and $_.AdminDisplayVersion -match "Version 14" -and $_.Site -eq $ADSite} | Select-Object -first 1).FQDN
-
-    Write-Verbose "Creating PSSession for $e14cas"
-    $url = (Get-PowerShellVirtualDirectory -Server $e14cas -AdPropertiesOnly | Where-Object {$_.Name -eq "Powershell (Default Web Site)"}).InternalURL.AbsoluteUri
-    if ($url -eq $null)
-    {
-        $url = "http://$e14cas/powershell"
-    }
-
-    Write-Verbose "Using URL $url"
-
-    try
-    {
-        $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $url -ErrorAction STOP
-    }
-    catch
-    {
-        Write-Verbose "Something went wrong"
-        if ($Log) {Write-LogFile $_.Exception.Message}
-        Write-Warning $_.Exception.Message
-        #$e14replicationhealth = "Fail"
-    }
-
-    try
-    {
-        Write-Verbose "Running replication health test on $e14mailboxserver"
-        #$e14replicationhealth = Invoke-Command -Session $session {Test-ReplicationHealth} -ErrorAction STOP
-        $e14replicationhealth = Invoke-Command -Session $session -Args $e14mailboxserver.Name {Test-ReplicationHealth $args[0]} -ErrorAction STOP
-    }
-    catch
-    {
-        Write-Verbose "An error occurred"
-        if ($Log) {Write-LogFile $_.Exception.Message}
-        Write-Warning $_.Exception.Message
-        #$e14replicationhealth = "Fail"
-    }
-
-    #Write-Verbose "Replication health test: $e14replicationhealth"
-    Write-Verbose "Removing PSSession"
-    Remove-PSSession $session.Id
-
-    return $e14replicationhealth
 }
 
 
